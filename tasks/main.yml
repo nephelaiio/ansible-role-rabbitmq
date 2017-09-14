@@ -1,0 +1,51 @@
+---
+- name: include variable overrides
+  include_vars: "{{ item }}"
+  with_first_found:
+    - files:
+        - "vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+        - "vars/{{ ansible_distribution }}.yml"
+        - "vars/{{ ansible_os_family }}.yml"
+      skip: true
+
+- name: install packages
+  become: yes
+  package:
+    name: "{{ item }}"
+    state: "{{ rabbitmq_packages_state }}"
+  with_items: "{{ rabbitmq_packages }}"
+  notify:
+    - enable rabbitmq management
+    - remove default vhost
+    - remove guest user
+
+- name: manage services
+  become: yes
+  service:
+    name: "{{ item }}"
+    state: "{{ rabbitmq_service_status }}"
+    enabled: "{{ rabbitmq_service_enabled }}"
+  with_items: "{{ rabbitmq_service_names }}"
+
+- name: create virtual host
+  become: yes
+  command: "rabbitmqctl add_vhost {{ rabbitmq_vhost }}"
+  when:
+    - rabbitmq_vhost != None
+    - rabbitmq_vhost != ''
+    - rabbitmq_vhost not in rabbitmq_vhosts.stdout_lines
+
+- name: retrieve users
+  become: yes
+  changed_when: false
+  command: rabbitmqctl list_users
+  register: rabbitmq_users
+
+- name: create user
+  become: yes
+  command: "rabbitmqctl add_user {{ rabbitmq_user_name }} {{ rabbitmq_user_password }}"
+  when:
+    - rabbitmq_user_name != None
+    - rabbitmq_user_name != ''
+    - rabbitmq_user_name not in rabbitmq_users.stdout
+  notify: configure user

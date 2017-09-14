@@ -1,0 +1,25 @@
+---
+- name: enable rabbitmq management
+  become: yes
+  command: rabbitmq-plugins enable rabbitmq_management
+  notify: restart rabbitmq
+
+- name: restart rabbitmq
+  become: yes
+  service:
+    name: "{{ item }}"
+    state: restarted
+  with_items: "{{ rabbitmq_service_names }}"
+
+- name: remove default vhost
+  become: yes
+  command: rabbitmqctl delete_vhost /
+
+- name: remove guest user
+  become: yes
+  command: "rabbitmqctl delete_user guest"
+  when: "'guest' in rabbitmq_users.stdout"
+
+- name: configure user
+  become: yes
+  command: "rabbitmqctl set_permissions -p {{ rabbitmq_vhost }} {{ rabbitmq_user_name }} '{{ rabbitmq_user_perm_conf }}' '{{ rabbitmq_user_perm_write }}' '{{ rabbitmq_user_perm_read }}'"
