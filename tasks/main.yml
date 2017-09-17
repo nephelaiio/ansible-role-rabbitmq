@@ -27,7 +27,13 @@
     enabled: "{{ rabbitmq_service_enabled }}"
   with_items: "{{ rabbitmq_service_names }}"
 
-- name: create virtual host
+- name: query vhosts
+  become: yes
+  changed_when: false
+  command: "rabbitmqctl list_vhosts"
+  register: rabbitmq_vhosts
+
+- name: create vhost
   become: yes
   command: "rabbitmqctl add_vhost {{ rabbitmq_vhost }}"
   when:
@@ -35,7 +41,7 @@
     - rabbitmq_vhost != ''
     - rabbitmq_vhost not in rabbitmq_vhosts.stdout_lines
 
-- name: retrieve users
+- name: query users
   become: yes
   changed_when: false
   command: rabbitmqctl list_users
@@ -43,7 +49,7 @@
 
 - name: create user
   become: yes
-  command: "rabbitmqctl add_user {{ rabbitmq_user_name }} {{ rabbitmq_user_password }}"
+  command: "rabbitmqctl add_user {{ rabbitmq_user_name }} {{ rabbitmq_user_pass}}"
   when:
     - rabbitmq_user_name != None
     - rabbitmq_user_name != ''
