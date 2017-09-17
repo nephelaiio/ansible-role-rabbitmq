@@ -11,19 +11,18 @@ platforms:
     privileged: True
     command: /sbin/init
     volume_mounts:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+      - "molecule_user/sys/fs/cgroup:/sys/fs/cgroup:ro"
 provisioner:
   name: ansible
-  lint:
-    name: ansible-lint
   inventory:
-    all:
-      rabbitmq_vhost: molecule_vhost
-      rabbitmq_user_name: molecule_user
-      rabbitmq_user_pass: molecule_pass
-      rabbitmq_user_perm_conf: 'conf'
-      rabbitmq_user_perm_write: 'write'
-      rabbitmq_user_perm_read: 'read'
+    host_vars:
+      ubuntu:
+        rabbitmq_vhost: molecule_vhost
+        rabbitmq_user_name: molecule_user
+        rabbitmq_user_pass: molecule_pass
+        rabbitmq_user_perm_conf: 'conf'
+        rabbitmq_user_perm_write: 'write'
+        rabbitmq_user_perm_read: 'read'
 scenario:
   name: vhost
 verifier:
