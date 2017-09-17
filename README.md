@@ -9,10 +9,6 @@ An [ansible role](https://galaxy.ansible.com/nephelaiio/rabbitmq) to install and
 
 Please refer to the [defaults file](/defaults/main.yml) for an up to date list of input parameters.
 
-## Dependencies
-
-By default this role does not depend on any external roles. If any such dependency is required please [add them](/meta/main.yml) according to [the documentation](http://docs.ansible.com/ansible/playbooks_roles.html#role-dependencies)
-
 ## Example Playbook
 
 - hosts: servers
