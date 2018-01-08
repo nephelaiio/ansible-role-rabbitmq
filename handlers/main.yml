@@ -14,6 +14,8 @@
 - name: remove default vhost
   become: yes
   command: rabbitmqctl delete_vhost /
+  when:
+    - rabbitmq_vhost != '/'
 
 - name: remove guest user
   become: yes
