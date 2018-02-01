@@ -1,11 +1,9 @@
 ---
-rabbitmq_packages:
-  - rabbitmq
+# rabbitmq_packages:
 
 rabbitmq_packages_state: present
 
-rabbitmq_service_names:
-  - rabbitmq
+# rabbitmq_service_names:
 
 rabbitmq_service_status: started
 

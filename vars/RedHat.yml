@@ -1,7 +1,7 @@
 ---
-rabbitmq_packages:
+rabbitmq_packages_default:
   - epel-release
   - rabbitmq-server
 
-rabbitmq_service_names:
+rabbitmq_service_names_default:
   - rabbitmq-server
