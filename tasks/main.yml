@@ -54,4 +54,6 @@
     - rabbitmq_user_name != None
     - rabbitmq_user_name != ''
     - rabbitmq_user_name not in rabbitmq_users.stdout
-  notify: configure user
+  notify:
+    - configure user
+    - set user tags

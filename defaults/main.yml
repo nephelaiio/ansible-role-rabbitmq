@@ -20,3 +20,5 @@ rabbitmq_user_perm_conf: '.*'
 rabbitmq_user_perm_write: '.*'
 
 rabbitmq_user_perm_read: '.*'
+
+rabbitmq_user_tags:
