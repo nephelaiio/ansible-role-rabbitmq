@@ -57,3 +57,5 @@
   notify:
     - configure user
     - set user tags
+
+- meta: flush_handlers
