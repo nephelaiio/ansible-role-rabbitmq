@@ -57,7 +57,6 @@
 
 - name: set user tags
   command: "rabbitmqctl set_user_tags {{ rabbitmq_user_name }} {{ rabbitmq_user_tags | join(' ') }}"
-  when: rabbitmq_user_tags
   tags:
     - skip_ansible_lint
   when:
