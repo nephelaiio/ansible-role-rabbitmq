@@ -33,7 +33,6 @@
 - name: create vhost
   command: "rabbitmqctl add_vhost {{ rabbitmq_vhost }}"
   when:
-    - rabbitmq_vhost != None
     - rabbitmq_vhost != ''
     - rabbitmq_vhost not in rabbitmq_vhosts.stdout_lines
 
@@ -45,7 +44,6 @@
 - name: create user
   command: "rabbitmqctl add_user {{ rabbitmq_user_name }} {{ rabbitmq_user_pass}}"
   when:
-    - rabbitmq_user_name != None
     - rabbitmq_user_name != ''
     - rabbitmq_user_name not in rabbitmq_users.stdout
 
@@ -53,9 +51,14 @@
   command: "rabbitmqctl set_permissions -p {{ rabbitmq_vhost }} {{ rabbitmq_user_name }} '{{ rabbitmq_user_perm_conf }}' '{{ rabbitmq_user_perm_write }}' '{{ rabbitmq_user_perm_read }}'"
   tags:
     - skip_ansible_lint
+  when:
+    - rabbitmq_user_name != ''
 
 - name: set user tags
   command: "rabbitmqctl set_user_tags {{ rabbitmq_user_name }} {{ rabbitmq_user_tags | join(' ') }}"
   when: rabbitmq_user_tags
   tags:
     - skip_ansible_lint
+  when:
+    - rabbitmq_user_name != ''
+    - rabbitmq_user_tags != []
