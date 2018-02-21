@@ -52,6 +52,7 @@
   tags:
     - skip_ansible_lint
   when:
+    - rabbitmq_vhost != ''
     - rabbitmq_user_name != ''
 
 - name: set user tags
