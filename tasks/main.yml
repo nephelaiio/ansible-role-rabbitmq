@@ -9,7 +9,6 @@
       skip: true
 
 - name: install packages
-  become: yes
   package:
     name: "{{ item }}"
     state: "{{ rabbitmq_packages_state }}"
@@ -20,7 +19,6 @@
     - remove guest user
 
 - name: manage services
-  become: yes
   service:
     name: "{{ item }}"
     state: "{{ rabbitmq_service_status }}"
@@ -28,13 +26,11 @@
   with_items: "{{ rabbitmq_service_names | default(rabbitmq_service_names_default) }}"
 
 - name: query vhosts
-  become: yes
   changed_when: false
   command: "rabbitmqctl list_vhosts"
   register: rabbitmq_vhosts
 
 - name: create vhost
-  become: yes
   command: "rabbitmqctl add_vhost {{ rabbitmq_vhost }}"
   when:
     - rabbitmq_vhost != None
@@ -42,20 +38,20 @@
     - rabbitmq_vhost not in rabbitmq_vhosts.stdout_lines
 
 - name: query users
-  become: yes
   changed_when: false
   command: rabbitmqctl list_users
   register: rabbitmq_users
 
 - name: create user
-  become: yes
   command: "rabbitmqctl add_user {{ rabbitmq_user_name }} {{ rabbitmq_user_pass}}"
   when:
     - rabbitmq_user_name != None
     - rabbitmq_user_name != ''
     - rabbitmq_user_name not in rabbitmq_users.stdout
-  notify:
-    - configure user
-    - set user tags
 
-- meta: flush_handlers
+- name: configure user
+  command: "rabbitmqctl set_permissions -p {{ rabbitmq_vhost }} {{ rabbitmq_user_name }} '{{ rabbitmq_user_perm_conf }}' '{{ rabbitmq_user_perm_write }}' '{{ rabbitmq_user_perm_read }}'"
+
+- name: set user tags
+  command: "rabbitmqctl set_user_tags {{ rabbitmq_user_name }} {{ rabbitmq_user_tags | join(' ') }}"
+  when: rabbitmq_user_tags
