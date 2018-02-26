@@ -47,6 +47,12 @@
     - rabbitmq_user_name != ''
     - rabbitmq_user_name not in rabbitmq_users.stdout
 
+- name: set user pass
+  command: "rabbitmqctl change_password {{ rabbitmq_user_name }} {{ rabbitmq_user_pass}}"
+  when:
+    - rabbitmq_user_name != ''
+  changed_when: false
+
 - name: configure user
   command: "rabbitmqctl set_permissions -p {{ rabbitmq_vhost }} {{ rabbitmq_user_name }} '{{ rabbitmq_user_perm_conf }}' '{{ rabbitmq_user_perm_write }}' '{{ rabbitmq_user_perm_read }}'"
   tags:
