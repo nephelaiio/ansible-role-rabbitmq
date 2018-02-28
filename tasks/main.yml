@@ -14,7 +14,6 @@
     state: "{{ rabbitmq_packages_state }}"
   with_items: "{{ rabbitmq_packages | default(rabbitmq_packages_default) }}"
   notify:
-    - enable rabbitmq management
     - remove default vhost
     - remove guest user
 
@@ -24,6 +23,10 @@
     state: "{{ rabbitmq_service_status }}"
     enabled: "{{ rabbitmq_service_enabled }}"
   with_items: "{{ rabbitmq_service_names | default(rabbitmq_service_names_default) }}"
+
+- name: enable rabbitmq management
+  changed_when: false
+  command: rabbitmq-plugins enable rabbitmq_management
 
 - name: query vhosts
   changed_when: false
