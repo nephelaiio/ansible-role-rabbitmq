@@ -10,7 +10,7 @@ platforms:
     image: solita/ubuntu-systemd:latest
     privileged: True
     command: /sbin/init
-    volume_mounts:
+    volumes:
       - "molecule_user/sys/fs/cgroup:/sys/fs/cgroup:ro"
 provisioner:
   name: ansible

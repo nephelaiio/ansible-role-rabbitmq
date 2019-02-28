@@ -7,22 +7,38 @@ lint:
   name: yamllint
 platforms:
   - name: centos
-    image: centos/systemd:latest
+    image: "geerlingguy/docker-centos7-ansible:latest"
     privileged: True
-    command: /usr/sbin/init
-    volume_mounts:
+    command: /usr/lib/systemd/systemd
+    volumes:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-  - name: ubuntu
-    image: solita/ubuntu-systemd:latest
+    pre_build_image: true
+  - name: xenial
+    image: "geerlingguy/docker-ubuntu1604-ansible:latest"
     privileged: True
-    command: /sbin/init
-    volume_mounts:
+    command: /lib/systemd/systemd
+    volumes:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+    pre_build_image: true
+  - name: bionic
+    image: "geerlingguy/docker-ubuntu1604-ansible:latest"
+    privileged: true
+    command: /lib/systemd/systemd
+    volumes:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+    pre_build_image: true
   - name: debian
-    image: debian:stretch
+    image: "geerlingguy/docker-debian9-ansible:latest"
     privileged: True
-    command: /sbin/init
-    volume_mounts:
+    command: /lib/systemd/systemd
+    volumes:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+    pre_build_image: true
+  - name: arch
+    image: archlinux/base:latest
+    privileged: True
+    command: /usr/lib/systemd/systemd
+    volumes:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
 provisioner:
   name: ansible
