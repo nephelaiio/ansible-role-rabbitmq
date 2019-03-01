@@ -7,11 +7,12 @@ lint:
   name: yamllint
 platforms:
   - name: ubuntu
-    image: solita/ubuntu-systemd:latest
-    privileged: True
-    command: /sbin/init
+    image: "geerlingguy/docker-ubuntu1804-ansible:latest"
+    privileged: true
+    command: /lib/systemd/systemd
     volumes:
-      - "molecule_user/sys/fs/cgroup:/sys/fs/cgroup:ro"
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+    pre_build_image: true
 provisioner:
   name: ansible
   inventory:

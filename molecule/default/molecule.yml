@@ -21,7 +21,7 @@ platforms:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
     pre_build_image: true
   - name: bionic
-    image: "geerlingguy/docker-ubuntu1604-ansible:latest"
+    image: "geerlingguy/docker-ubuntu1804-ansible:latest"
     privileged: true
     command: /lib/systemd/systemd
     volumes:
