@@ -36,7 +36,7 @@
 - name: create vhost
   command: "rabbitmqctl add_vhost {{ rabbitmq_vhost }}"
   when:
-    - rabbitmq_vhost != ''
+    - rabbitmq_vhost is defined
     - rabbitmq_vhost not in rabbitmq_vhosts.stdout_lines
 
 - name: query users
@@ -45,31 +45,27 @@
   register: rabbitmq_users
 
 - name: create user
-  command: "rabbitmqctl add_user {{ rabbitmq_user_name }} {{ rabbitmq_user_pass}}"
+  command: "rabbitmqctl add_user {{ rabbitmq_user_name }} {{ rabbitmq_user_pass }}"
   when:
-    - rabbitmq_user_name != ''
+    - rabbitmq_user_name is defined
     - rabbitmq_user_name not in rabbitmq_users.stdout
 
 - name: set user pass
-  command: "rabbitmqctl change_password {{ rabbitmq_user_name }} {{ rabbitmq_user_pass}}"
+  command: "rabbitmqctl change_password {{ rabbitmq_user_name }} {{ rabbitmq_user_pass }}"
   when:
-    - rabbitmq_user_name != ''
+    - rabbitmq_user_name is defined
   changed_when: false
 
 - name: configure user
-  command: "rabbitmqctl set_permissions -p {{ rabbitmq_vhost }} {{ rabbitmq_user_name }} '{{ rabbitmq_user_perm_conf }}' '{{ rabbitmq_user_perm_write }}' '{{ rabbitmq_user_perm_read }}'"
-  tags:
-    - skip_ansible_lint
+  command: "rabbitmqctl set_permissions -p {{ rabbitmq_vhost }} {{ rabbitmq_user_name }} '{{ rabbitmq_user_perm_conf }}' '{{ rabbitmq_user_perm_write }}' '{{ rabbitmq_user_perm_read }}'"  # noqa 204
   when:
-    - rabbitmq_vhost != ''
-    - rabbitmq_user_name != ''
+    - rabbitmq_vhost is defined
+    - rabbitmq_user_name is defined
   changed_when: false
 
 - name: set user tags
   command: "rabbitmqctl set_user_tags {{ rabbitmq_user_name }} {{ rabbitmq_user_tags | join(' ') }}"
-  tags:
-    - skip_ansible_lint
   when:
-    - rabbitmq_user_name != ''
+    - rabbitmq_user_name is defined
     - rabbitmq_user_tags != []
   changed_when: false
