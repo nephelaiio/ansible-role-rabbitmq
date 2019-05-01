@@ -6,7 +6,7 @@ driver:
 lint:
   name: yamllint
 platforms:
-  - name: centos7
+  - name: centos
     image: centos/systemd:latest
     privileged: True
     command: /usr/sbin/init
