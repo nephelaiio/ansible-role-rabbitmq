@@ -6,39 +6,35 @@ driver:
 lint:
   name: yamllint
 platforms:
-  - name: centos
-    image: "geerlingguy/docker-centos7-ansible:latest"
+  - name: centos7
+    image: centos/systemd:latest
     privileged: True
-    command: /usr/lib/systemd/systemd
-    volumes:
+    command: /usr/sbin/init
+    volume_mounts:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-    pre_build_image: true
-  - name: xenial
-    image: "geerlingguy/docker-ubuntu1604-ansible:latest"
+  - name: stretch
+    image: debian:stretch
     privileged: True
-    command: /lib/systemd/systemd
-    volumes:
+    command: /sbin/init
+    volume_mounts:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-    pre_build_image: true
-  - name: bionic
-    image: "geerlingguy/docker-ubuntu1804-ansible:latest"
-    privileged: true
-    command: /lib/systemd/systemd
-    volumes:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-    pre_build_image: true
-  - name: debian
-    image: "geerlingguy/docker-debian9-ansible:latest"
-    privileged: True
-    command: /lib/systemd/systemd
-    volumes:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-    pre_build_image: true
   - name: arch
     image: archlinux/base:latest
     privileged: True
-    command: /usr/lib/systemd/systemd
-    volumes:
+    command: /usr/sbin/init
+    volume_mounts:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+  - name: xenial
+    image: ubuntu:xenial
+    privileged: True
+    command: /sbin/init
+    volume_mounts:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+  - name: bionic
+    image: ubuntu:bionic
+    privileged: True
+    command: /sbin/init
+    volume_mounts:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
 provisioner:
   name: ansible
