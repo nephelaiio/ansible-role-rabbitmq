@@ -3,18 +3,18 @@ galaxy_info:
   author: Ted Cook
   description: An Ansible role to install and configure rabbitmq
   license: MIT
-  min_ansible_version: 2.2
+  min_ansible_version: 2.9.11
   platforms:
-    - name: EL
+    - name: CentOS
       versions:
         - 7
-    - name: Archlinux
+    - name: Debian
       versions:
-        - all
+        - buster
     - name: Ubuntu
       versions:
         - bionic
-        - xenial
+        - focal
   galaxy_tags:
     - rabbitmq
 
