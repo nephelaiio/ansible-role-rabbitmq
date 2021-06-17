@@ -1,7 +1,7 @@
 # nephelaiio.rabbitmq
 
 [![Build Status](https://github.com/nephelaiio/ansible-role-rabbitmq/workflows/CI/badge.svg)](https://travis-ci.org/nephelaiio/ansible-role-rabbitmq)
-[![Ansible Galaxy](http://img.shields.io/badge/ansible--galaxy-nephelaiio.rabbitmq.vim-blue.svg)](https://galaxy.ansible.com/nephelaiio/rabbitmq/)
+[![Ansible Galaxy](http://img.shields.io/badge/ansible--galaxy-nephelaiio.rabbitmq-blue.svg)](https://galaxy.ansible.com/nephelaiio/rabbitmq/)
 
 An [ansible role](https://galaxy.ansible.com/nephelaiio/rabbitmq) to install and configure rabbitmq
 
