@@ -3,40 +3,19 @@ dependency:
   name: galaxy
 driver:
   name: docker
-lint: |
-  set -e
-  yamllint .
-  ansible-lint .
 platforms:
-  - name: bionic
-    image: ubuntu:bionic
-    privileged: True
-    command: /sbin/init
-    volume_mounts:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:rw"
-    environment:
-      container: docker
-  - name: xenial
-    image: ubuntu:xenial
-    privileged: True
-    command: /sbin/init
-    volume_mounts:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:rw"
-    environment:
-      container: docker
-  - name: centos7
-    image: centos:7
-    privileged: True
-    command: /usr/sbin/init
-    volume_mounts:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:rw"
-    environment:
-      container: docker
+  - name: instance
+    image: geerlingguy/docker-${MOLECULE_DOCKER_IMAGE:-ubuntu2004}-ansible:latest
+    command: ${MOLECULE_DOCKER_COMMAND:-""}
+    privileged: true
+    volumes:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+    pre_build_image: true
 provisioner:
   name: ansible
   inventory:
     host_vars:
-      ubuntu:
+      instance:
         rabbitmq_vhost: molecule_vhost
         rabbitmq_user_name: molecule_user
         rabbitmq_user_pass: molecule_pass
