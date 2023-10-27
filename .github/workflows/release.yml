@@ -14,7 +14,7 @@ on:
 defaults:
 
   run:
-    working-directory: 'nephelaiiorabbitmq'
+    working-directory: 'nephelaiio.rabbitmq'
 
 jobs:
 
