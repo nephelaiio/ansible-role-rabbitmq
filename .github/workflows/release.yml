@@ -14,7 +14,7 @@ on:
 defaults:
 
   run:
-    working-directory: 'nephelaiio.mongos'
+    working-directory: 'nephelaiiorabbitmq'
 
 jobs:
 
@@ -26,7 +26,7 @@ jobs:
       - name: Check out the codebase.
         uses: actions/checkout@v4
         with:
-          path: 'nephelaiio.mongos'
+          path: 'nephelaiio.rabbitmq'
 
       - name: Set up Python 3
         uses: actions/setup-python@v4
