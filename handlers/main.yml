@@ -1,9 +1,14 @@
 ---
-- name: remove default vhost
-  command: rabbitmqctl delete_vhost /
-  when:
-    - rabbitmq_vhost is defined
+- name: Remove default vhost
+  ansible.builtin.command: rabbitmqctl delete_vhost /
+  listen: vhost_remove
+  when: rabbitmq_vhost is defined
+  changed_when: true
 
-- name: remove guest user
-  command: rabbitmqctl delete_user guest
-  when: "'guest' in rabbitmq_users.stdout"
+- name: Remove guest user
+  ansible.builtin.command: rabbitmqctl delete_user guest
+  listen: guest_remove
+  vars:
+    _output: guest
+  when: _output in rabbitmq_users.stdout
+  changed_when: true

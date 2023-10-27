@@ -1,6 +1,3 @@
 ---
-rabbitmq_packages_default:
-  - rabbitmq
-
-rabbitmq_service_names_default:
-  - rabbitmq
+rabbitmq_package_default: rabbitmq
+rabbitmq_service_default: rabbitmq

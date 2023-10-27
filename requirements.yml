@@ -1,2 +1,3 @@
 ---
-- geerlingguy.repo-epel
+roles:
+  - name: geerlingguy.repo-epel
