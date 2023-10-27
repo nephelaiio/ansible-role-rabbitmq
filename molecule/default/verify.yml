@@ -1,0 +1,45 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    _service_name: rabbitmq-server
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Verify service definition
+      ansible.builtin.fail:
+        msg: "Service {{ _service_name }} is not defined"
+      when: not _service_name in services
+
+    - name: Debug service state
+      ansible.builtin.debug:
+        msg: "{{ services[_service_name] }}"
+
+    - name: Record service facts
+      ansible.builtin.set_fact:
+        service_data: "{{ services[_service_name] }}"
+
+    - name: Verify service state
+      ansible.builtin.fail:
+        msg: "Service {{ _service_name }} is not running"
+      when: not service_data.state == 'running'
+
+    - name: Verify rabbitmq cli
+      ansible.builtin.command: rabbitmqctl help
+
+    - name: Query rabbitmq vhosts
+      ansible.builtin.command: rabbitmqctl list_vhosts
+      register: _query_vhost
+      failed_when: _query_vhost.stdout is not search("molecule_vhost", multiline=true)
+
+    - name: Query rabbitmq users
+      ansible.builtin.command: rabbitmqctl list_users
+      register: _query_user
+      failed_when: _query_user.stdout is not search("molecule_user", multiline=true)
+
+    - name: Query rabbitmq permissions
+      ansible.builtin.command: rabbitmqctl list_user_permissions molecule_user
+      register: _query_perms
+      failed_when: _query_perms.stdout is not search('molecule_vhost\tconf\twrite\tread', multiline=true)

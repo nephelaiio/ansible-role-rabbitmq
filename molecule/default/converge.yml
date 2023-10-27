@@ -1,25 +1,12 @@
 ---
-- name: converge
-
+- name: Converge
   hosts: all
-
   become: true
-
   roles:
-
     - nephelaiio.rabbitmq
-
   pre_tasks:
-
-    - name: update apt cache.
-      apt:
-        update_cache: yes
-      when: (ansible_os_family | lower) == 'debian'
-      failed_when: False
-      ignore_errors: True
-      changed_when: False
-
-    - name: remove dockerenv
-      file:
-        path: /.dockerenv
-        state: absent
+    - name: Update apt cache.
+      ansible.builtin.apt:
+        update_cache: true
+      when: ansible_os_family == 'Debian'
+      changed_when: false

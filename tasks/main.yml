@@ -1,6 +1,6 @@
 ---
-- name: include variable overrides
-  include_vars: "{{ item }}"
+- name: Include variable overrides
+  ansible.builtin.include_vars: "{{ item }}"
   with_first_found:
     - files:
         - "vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
@@ -8,64 +8,82 @@
         - "vars/{{ ansible_os_family }}.yml"
         - "vars/default.yml"
 
-- name: install packages
-  package:
-    name: "{{ item }}"
-    state: "{{ rabbitmq_packages_state }}"
-  with_items: "{{ rabbitmq_packages | default(rabbitmq_packages_default) }}"
+- name: Install packages
+  ansible.builtin.package:
+    name: "{{ rabbitmq_packages | default(rabbitmq_package_default) }}"
+    state: "{{ rabbitmq_package_state }}"
   notify:
-    - remove default vhost
-    - remove guest user
+    - vhost_remove
+    - guest_remove
 
-- name: manage services
-  service:
-    name: "{{ item }}"
+- name: Manage services
+  ansible.builtin.service:
+    name: "{{ rabbitmq_service_name | default(rabbitmq_service_default) }}"
     state: "{{ rabbitmq_service_status }}"
     enabled: "{{ rabbitmq_service_enabled }}"
-  with_items: "{{ rabbitmq_service_names | default(rabbitmq_service_names_default) }}"
 
-- name: enable rabbitmq management
+- name: Enable rabbitmq management
+  ansible.builtin.command: rabbitmq-plugins enable rabbitmq_management
   changed_when: false
-  command: rabbitmq-plugins enable rabbitmq_management
 
-- name: query vhosts
+- name: Query vhosts
+  ansible.builtin.command: "rabbitmqctl list_vhosts"
   changed_when: false
-  command: "rabbitmqctl list_vhosts"
   register: rabbitmq_vhosts
 
-- name: create vhost
-  command: "rabbitmqctl add_vhost {{ rabbitmq_vhost }}"
-  when:
-    - rabbitmq_vhost is defined
-    - rabbitmq_vhost not in rabbitmq_vhosts.stdout_lines
-
-- name: query users
+- name: Create vhost
+  ansible.builtin.command: "rabbitmqctl add_vhost {{ rabbitmq_vhost }}"
+  vars:
+    _defined: "{{ rabbitmq_vhost is defined }}"
+    _absent: "{{ rabbitmq_vhost not in rabbitmq_vhosts.stdout_lines }}"
+  when: _defined and _absent
   changed_when: false
-  command: rabbitmqctl list_users
+
+- name: Query users
+  ansible.builtin.command: rabbitmqctl list_users
+  changed_when: false
   register: rabbitmq_users
 
-- name: create user
-  command: "rabbitmqctl add_user {{ rabbitmq_user_name }} {{ rabbitmq_user_pass }}"
-  when:
-    - rabbitmq_user_name is defined
-    - rabbitmq_user_name not in rabbitmq_users.stdout
-
-- name: set user pass
-  command: "rabbitmqctl change_password {{ rabbitmq_user_name }} {{ rabbitmq_user_pass }}"
-  when:
-    - rabbitmq_user_name is defined
+- name: Create user
+  ansible.builtin.command: >
+    rabbitmqctl add_user
+      {{ rabbitmq_user_name }}
+      {{ rabbitmq_user_pass }}
+  vars:
+    _defined: "{{ rabbitmq_user_name is defined }}"
+    _absent: "{{ rabbitmq_user_name not in rabbitmq_users.stdout }}"
+  when: _defined and _absent
   changed_when: false
 
-- name: configure user
-  command: "rabbitmqctl set_permissions -p {{ rabbitmq_vhost }} {{ rabbitmq_user_name }} '{{ rabbitmq_user_perm_conf }}' '{{ rabbitmq_user_perm_write }}' '{{ rabbitmq_user_perm_read }}'"  # noqa 204
-  when:
-    - rabbitmq_vhost is defined
-    - rabbitmq_user_name is defined
+- name: Set user pass
+  ansible.builtin.command: >
+    rabbitmqctl change_password
+      {{ rabbitmq_user_name }}
+      {{ rabbitmq_user_pass }}
+  when: rabbitmq_user_name is defined
   changed_when: false
 
-- name: set user tags
-  command: "rabbitmqctl set_user_tags {{ rabbitmq_user_name }} {{ rabbitmq_user_tags | join(' ') }}"
-  when:
-    - rabbitmq_user_name is defined
-    - rabbitmq_user_tags != []
+- name: Configure user
+  ansible.builtin.command: >
+    rabbitmqctl set_permissions -p
+      {{ rabbitmq_vhost }}
+      {{ rabbitmq_user_name }}
+      '{{ rabbitmq_user_perm_conf }}'
+      '{{ rabbitmq_user_perm_write }}'
+      '{{ rabbitmq_user_perm_read }}'
+  vars:
+    _vhost: "{{ rabbitmq_vhost is defined }}"
+    _user: "{{ rabbitmq_user_name is defined }}"
+  when: _vhost and _user
+  changed_when: false
+
+- name: Set user tags
+  ansible.builtin.command: >
+    rabbitmqctl set_user_tags
+      {{ rabbitmq_user_name }}
+      {{ rabbitmq_user_tags | join(' ') }}
+  vars:
+    _defined: "{{ rabbitmq_user_name is defined }}"
+    _tags: "{{ rabbitmq_user_tags != [] }}"
+  when: _defined and _tags
   changed_when: false
