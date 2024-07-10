@@ -1,8 +1,7 @@
 ---
 galaxy_info:
-  standalone: true
-  author: nephelaiio
   role_name: rabbitmq
+  author: nephelaiio
   description: An Ansible role to install and configure rabbitmq
   license: MIT
   min_ansible_version: '2.2'
