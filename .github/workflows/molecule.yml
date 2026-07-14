@@ -1,66 +1,42 @@
 ---
 name: molecule
-
 on:
-
   pull_request:
     branches:
       - master
-  schedule:
-    - cron: "0 5 * * 5"
-
 defaults:
-
   run:
-    working-directory: 'nephelaiio.rabbitmq'
-
+    working-directory: "nephelaiio.rabbitmq"
 jobs:
-
   molecule:
-
     name: molecule
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        scenario:
-          - name: default
         image:
-          - name: ubuntu2204
+          - name: ubuntu2404
             command: /lib/systemd/systemd
-          - name: ubuntu2004
+          - name: ubuntu2204
             command: /lib/systemd/systemd
           - name: debian12
             command: /lib/systemd/systemd
-          - name: debian11
-            command: /lib/systemd/systemd
+    env:
+      MOLECULE_OUTPUT_DIR: /tmp/logs
     steps:
-      - name: Check out the codebase
-        uses: actions/checkout@v4
+      - name: Run devbox tests
+        uses: pokerops/ansible-utils@master
         with:
-          path: 'nephelaiio.rabbitmq'
+          run: >
+            just
+            --set MOLECULE_DOCKER_IMAGE ${{ matrix.image.name }}
+            --set MOLECULE_DOCKER_COMMAND ${{ matrix.image.command }}
+            requirements test
 
-      - name: Set up python 3
-        uses: actions/setup-python@v5
+      - name: Upload install logs
+        uses: actions/upload-artifact@v7
         with:
-          python-version: '3.x'
-
-      - name: Update ubuntu repositories
-        run: sudo apt-get update
-
-      - name: Install make
-        run: sudo apt-get install -y make
-
-      - name: Install dependencies
-        run: make install
-
-      - name: Debug test environment
-        run: make debug
-
-      - name: Run molecule tests.
-        run: make test
-        env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
-          MOLECULE_DOCKER_IMAGE: ${{ matrix.image.name }}
-          MOLECULE_DOCKER_COMMAND: ${{ matrix.image.command }}
-          MOLECULE_SCENARIO: ${{ matrix.scenario.name }}
+          name: install-${{ matrix.scenario }}-${{ matrix.image.name }}.log
+          path: |
+            /tmp/logs/*
+          if-no-files-found: ignore
+        if: always()
