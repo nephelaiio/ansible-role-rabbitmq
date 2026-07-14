@@ -1,3 +1,5 @@
 ---
 roles:
   - name: geerlingguy.repo-epel
+collections:
+  - name: nephelaiio.plugins
