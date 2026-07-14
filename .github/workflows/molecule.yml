@@ -30,7 +30,6 @@ jobs:
         with:
           run: >
             just
-            --set MOLECULE_SCENARIO ${{ matrix.scenario }}
             --set MOLECULE_DOCKER_IMAGE ${{ matrix.image.name }}
             --set MOLECULE_DOCKER_COMMAND ${{ matrix.image.command }}
             requirements test
