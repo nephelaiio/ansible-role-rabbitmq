@@ -1,7 +1,13 @@
 *.swp
 .molecule/
 .cache/
+.devbox/
+.ansible/
+roles/
+ansible_collections/
+
 __pycache__/
 Gemfile.lock
 **/.ropeproject
 playbook.retry
+.DS_Store
