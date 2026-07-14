@@ -1,3 +1,4 @@
+# Test CI trigger
 ---
 rabbitmq_package_default: rabbitmq-server
 rabbitmq_service_default: rabbitmq-server
