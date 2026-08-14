@@ -3,6 +3,7 @@
   hosts: all
   become: true
   roles:
+    - pokerops.rabbitmq_repo
     - nephelaiio.rabbitmq
   pre_tasks:
     - name: Update apt cache.

@@ -25,6 +25,8 @@ Role is tested against the following distributions (docker images):
 - Ubuntu 24.04
 - Ubuntu 22.04
 - Debian 12
+- Debian 13
+- RockyLinux 10
 
 You can test the role directly from sources using command `molecule test`
 

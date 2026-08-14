@@ -1,5 +1,6 @@
 ---
 roles:
   - name: geerlingguy.repo-epel
+  - name: pokerops.rabbitmq_repo
 collections:
   - name: nephelaiio.plugins
