@@ -3,7 +3,7 @@
   hosts: all
   become: true
   vars:
-    _service_name: rabbitmq-server
+    _service_name: rabbitmq-server.service
   tasks:
     - name: Gather service facts
       ansible.builtin.service_facts:
