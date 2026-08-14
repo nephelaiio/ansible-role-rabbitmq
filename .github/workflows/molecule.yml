@@ -20,6 +20,10 @@ jobs:
             command: /lib/systemd/systemd
           - name: debian12
             command: /lib/systemd/systemd
+          - name: debian13
+            command: /lib/systemd/systemd
+          - name: rockylinux10
+            command: /lib/systemd/systemd
     env:
       MOLECULE_OUTPUT_DIR: /tmp/logs
     steps:
