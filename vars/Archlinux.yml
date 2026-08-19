@@ -1,3 +1,0 @@
----
-rabbitmq_package_default: rabbitmq
-rabbitmq_service_default: rabbitmq
