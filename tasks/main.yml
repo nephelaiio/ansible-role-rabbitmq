@@ -1,16 +1,27 @@
 ---
 - name: Include variable overrides
-  ansible.builtin.include_vars: "{{ item }}"
-  with_first_found:
-    - files:
-        - "vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
-        - "vars/{{ ansible_distribution }}.yml"
-        - "vars/{{ ansible_os_family }}.yml"
-        - "vars/default.yml"
+  ansible.builtin.set_fact:
+    _rabbitmq_erlang_packages: "{{ rabbitmq_erlang_packages | default(rabbitmq_erlang_default | nephelaiio.plugins.sorted_get(overrides)) }}"
+    _rabbitmq_packages: "{{ rabbitmq_packages | default(rabbitmq_packages_default | nephelaiio.plugins.sorted_get(overrides)) }}"
+    _rabbitmq_service_name: "{{ rabbitmq_service_name | default(rabbitmq_service_default | nephelaiio.plugins.sorted_get(overrides)) }}"
+  vars:
+    overrides:
+      - "{{ ansible_distribution | lower }}-{{ ansible_distribution_release | lower }}"
+      - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}"
+      - "{{ ansible_distribution | lower }}"
+      - "{{ ansible_os_family | lower }}"
+      - "default"
 
-- name: Install packages
+- name: Install erlang packages
   ansible.builtin.package:
-    name: "{{ rabbitmq_packages | default(rabbitmq_package_default) }}"
+    name: "{{ _rabbitmq_erlang_packages }}"
+  notify:
+    - vhost_remove
+    - guest_remove
+
+- name: Install rabbitmq packages
+  ansible.builtin.package:
+    name: "{{ _rabbitmq_packages }}"
     state: "{{ rabbitmq_package_state }}"
   notify:
     - vhost_remove
@@ -18,7 +29,7 @@
 
 - name: Manage services
   ansible.builtin.service:
-    name: "{{ rabbitmq_service_name | default(rabbitmq_service_default) }}"
+    name: "{{ _rabbitmq_service_name }}"
     state: "{{ rabbitmq_service_status }}"
     enabled: "{{ rabbitmq_service_enabled }}"
 

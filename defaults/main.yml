@@ -7,8 +7,41 @@
 rabbitmq_package_state: present
 rabbitmq_service_status: started
 rabbitmq_service_enabled: true
-rabbitmq_user_pass: ''
-rabbitmq_user_perm_conf: '.*'
-rabbitmq_user_perm_write: '.*'
-rabbitmq_user_perm_read: '.*'
+rabbitmq_user_pass: ""
+rabbitmq_user_perm_conf: ".*"
+rabbitmq_user_perm_write: ".*"
+rabbitmq_user_perm_read: ".*"
 rabbitmq_user_tags: []
+
+rabbitmq_erlang_default:
+  debian:
+    - erlang-base
+    - erlang-asn1
+    - erlang-crypto
+    - erlang-eldap
+    - erlang-ftp
+    - erlang-inets
+    - erlang-mnesia
+    - erlang-os-mon
+    - erlang-parsetools
+    - erlang-public-key
+    - erlang-runtime-tools
+    - erlang-snmp
+    - erlang-ssl
+    - erlang-syntax-tools
+    - erlang-tftp
+    - erlang-tools
+    - erlang-xmerl
+  redhat:
+    - erlang
+  default: []
+
+rabbitmq_service_default:
+  archlinux: rabbitmq
+  default: rabbitmq-server
+
+rabbitmq_packages_default:
+  archlinux:
+    - rabbitmq
+  default:
+    - rabbitmq-server
