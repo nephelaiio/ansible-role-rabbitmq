@@ -12,20 +12,27 @@
       - "{{ ansible_os_family | lower }}"
       - "default"
 
+- name: Verify rabbitmq users
+  ansible.builtin.assert:
+    that:
+      - _names | length == 0
+      - _passwords | length == 0
+      - _guest_user | length == 0
+  vars:
+    _targets: "{{ rabbitmq_users }}"
+    _names: "{{ _targets | rejectattr('name', 'defined') }}"
+    _passwords: "{{ _targets | rejectattr('password', 'defined') }}"
+    _guest_user: "{{ _targets | selectattr('name', 'equalto', 'guest') }}"
+  when: _targets | length > 0
+
 - name: Install erlang packages
   ansible.builtin.package:
     name: "{{ _rabbitmq_erlang_packages }}"
-  notify:
-    - vhost_remove
-    - guest_remove
 
 - name: Install rabbitmq packages
   ansible.builtin.package:
     name: "{{ _rabbitmq_packages }}"
     state: "{{ rabbitmq_package_state }}"
-  notify:
-    - vhost_remove
-    - guest_remove
 
 - name: Manage services
   ansible.builtin.service:
@@ -38,63 +45,168 @@
   changed_when: false
 
 - name: Query vhosts
-  ansible.builtin.command: "rabbitmqctl list_vhosts"
+  ansible.builtin.command: "rabbitmqctl list_vhosts --formatter json"
   changed_when: false
-  register: rabbitmq_vhosts
-
-- name: Create vhost
-  ansible.builtin.command: "rabbitmqctl add_vhost {{ rabbitmq_vhost }}"
-  vars:
-    _defined: "{{ rabbitmq_vhost is defined }}"
-    _absent: "{{ rabbitmq_vhost not in rabbitmq_vhosts.stdout_lines }}"
-  when: _defined and _absent
-  changed_when: false
+  register: rabbitmq_query_vhosts
 
 - name: Query users
-  ansible.builtin.command: rabbitmqctl list_users
+  ansible.builtin.command: rabbitmqctl list_users --formatter json
   changed_when: false
-  register: rabbitmq_users
+  register: rabbitmq_query_users
 
-- name: Create user
+- name: Build rabbitmq facts
+  ansible.builtin.set_fact:
+    rabbitmq_target_users: "{{ _target_users_default }}"
+    rabbitmq_existing_users: "{{ _existing_users }}"
+    rabbitmq_create_users: "{{ _create_users }}"
+    rabbitmq_delete_users: "{{ _delete_users }}"
+    rabbitmq_target_vhosts: "{{ _target_vhosts }}"
+    rabbitmq_existing_vhosts: "{{ _existing_vhosts }}"
+    rabbitmq_create_vhosts: "{{ _create_vhosts }}"
+    rabbitmq_delete_vhosts: "{{ _delete_vhosts | reject('in', _vhosts_included) }}"
+  vars:
+    _users_default:
+      vhost: "/"
+      conf: "{{ rabbitmq_user_perm_conf }}"
+      write: "{{ rabbitmq_user_perm_write }}"
+      read: "{{ rabbitmq_user_perm_read }}"
+    _vhosts_included: "{{ rabbitmq_default_vhosts }}"
+    _to_dict: "nephelaiio.plugins.to_dict"
+    _drop_attrs: "nephelaiio.plugins.drop_attributes"
+    _attrs:
+      - user
+    _query_users: "{{ rabbitmq_query_users.stdout | default('') }}"
+    _sort_users: "{{ _query_users | sort(attribute='user') }}"
+    _existing_user_names: "{{ _sort_users | map(attribute='user') }}"
+    _existing_user_names_dict: "{{ _existing_user_names | map(_to_dict, 'name') }}"
+    _existing_users_overwritten: "{{ _sort_users | zip(_existing_user_names_dict) | map('combine') }}"
+    _existing_users: "{{ _existing_users_overwritten | map(_drop_attrs, _attrs) }}"
+    _target_users: "{{ rabbitmq_users | default([]) }}"
+    _target_users_default: "{{ [_users_default] | product(_target_users) | map('combine') }}"
+    _target_user_names: "{{ _target_users_default | map(attribute='name') }}"
+    _create_users: "{{ _target_users_default | rejectattr('name', 'in', _existing_user_names) }}"
+    _delete_users: "{{ _existing_users | rejectattr('name', 'in', _target_user_names) }}"
+    _query_vhosts: "{{ rabbitmq_query_vhosts.stdout | default('') }}"
+    _existing_vhosts: "{{ _query_vhosts | map(attribute='name') }}"
+    _target_vhosts: "{{ rabbitmq_vhosts | default([]) }}"
+    _create_vhosts: "{{ _target_vhosts | reject('in', _existing_vhosts) }}"
+    _delete_vhosts: "{{ _existing_vhosts | reject('in', _target_vhosts) }}"
+
+- name: Debug existing rabbitmq users
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_existing_users }}]"
+
+- name: Debug target rabbitmq users
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_target_users }}]"
+
+- name: Debug missing rabbitmq users
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_create_users }}]"
+
+- name: Debug stale rabbitmq users
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_delete_users | map(attribute='name') | join(', ') }}]"
+
+- name: Debug existing rabbitmq vhosts
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_existing_vhosts | join(', ') }}]"
+
+- name: Debug target rabbitmq users
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_target_vhosts | join(', ') }}]"
+
+- name: Debug missing rabbitmq vhosts
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_create_vhosts | join(', ') }}]"
+
+- name: Debug stale rabbitmq vhosts
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_delete_vhosts | join(', ') }}]"
+
+- name: Verify rabbitmq target users
+  ansible.builtin.assert:
+    that: _target_users | rejectattr('vhost', 'in', _vhosts) | length == 0
+    fail_msg: "RabbitMQ target vhosts must be present: ['{{ _missing_vhosts | join(', ') }}']"
+  vars:
+    _target_users: "{{ rabbitmq_target_users }}"
+    _vhosts: "{{ rabbitmq_target_vhosts + rabbitmq_default_vhosts | unique }}"
+    _missing_vhosts: "{{ _target_users | rejectattr('vhost', 'in', _vhosts) }}"
+
+- name: Verify rabbitmq target vhosts
+  ansible.builtin.assert:
+    that: _default_vhosts | select('in', _delete_vhosts) | length == 0
+    fail_msg: "RabbitMQ default vhosts cannot be deleted: ['{{ _default_vhosts | join(', ') }}']"
+  vars:
+    _delete_vhosts: "{{ rabbitmq_delete_vhosts }}"
+    _default_vhosts: "{{ rabbitmq_default_vhosts }}"
+
+- name: Create rabbitmq vhost
+  ansible.builtin.command: "rabbitmqctl add_vhost {{ item }}"
+  loop: "{{ rabbitmq_create_vhosts }}"
+  changed_when: false
+
+- name: Create rabbitmq user
   ansible.builtin.command: >
     rabbitmqctl add_user
-      {{ rabbitmq_user_name }}
-      {{ rabbitmq_user_pass }}
+      {{ _name }}
+      {{ item.password }}
   vars:
-    _defined: "{{ rabbitmq_user_name is defined }}"
-    _absent: "{{ rabbitmq_user_name not in rabbitmq_users.stdout }}"
-  when: _defined and _absent
+    _name: "{{ item.name }}"
+  loop_control:
+    label: "{{ _name }}"
+  loop: "{{ rabbitmq_create_users }}"
   changed_when: false
 
 - name: Set user pass
   ansible.builtin.command: >
     rabbitmqctl change_password
-      {{ rabbitmq_user_name }}
-      {{ rabbitmq_user_pass }}
-  when: rabbitmq_user_name is defined
+      {{ _name }}
+      {{ item.password }}
+  vars:
+    _name: "{{ item.name }}"
+  loop_control:
+    label: "{{ _name }}"
+  loop: "{{ rabbitmq_target_users }}"
   changed_when: false
 
 - name: Configure user
   ansible.builtin.command: >
     rabbitmqctl set_permissions -p
-      {{ rabbitmq_vhost }}
-      {{ rabbitmq_user_name }}
-      '{{ rabbitmq_user_perm_conf }}'
-      '{{ rabbitmq_user_perm_write }}'
-      '{{ rabbitmq_user_perm_read }}'
+      {{ item.vhost | default('/') }}
+      {{ _name }}
+      '{{ item.conf | default(rabbitmq_user_perm_conf) }}'
+      '{{ item.write | default(rabbitmq_user_perm_write) }}'
+      '{{ item.read | default(rabbitmq_user_perm_read) }}'
   vars:
-    _vhost: "{{ rabbitmq_vhost is defined }}"
-    _user: "{{ rabbitmq_user_name is defined }}"
-  when: _vhost and _user
+    _name: "{{ item.name }}"
+  loop_control:
+    label: "{{ _name }}"
+  loop: "{{ rabbitmq_target_users }}"
   changed_when: false
 
 - name: Set user tags
   ansible.builtin.command: >
     rabbitmqctl set_user_tags
-      {{ rabbitmq_user_name }}
-      {{ rabbitmq_user_tags | join(' ') }}
+      {{ _name }}
+      {{ item.tags | default(rabbitmq_user_tags | join(' ')) }}
   vars:
-    _defined: "{{ rabbitmq_user_name is defined }}"
-    _tags: "{{ rabbitmq_user_tags != [] }}"
-  when: _defined and _tags
+    _name: "{{ item.name }}"
+  loop_control:
+    label: "{{ _name }}"
+  loop: "{{ rabbitmq_target_users }}"
+  changed_when: false
+
+- name: Prune stale rabbitmq users
+  ansible.builtin.command: rabbitmqctl delete_user {{ _name }}
+  vars:
+    _name: "{{ item.name }}"
+  loop_control:
+    label: "{{ _name }}"
+  loop: "{{ rabbitmq_delete_users }}"
+  changed_when: true
+
+- name: Prune stale rabbitmq vhosts
+  ansible.builtin.command: "rabbitmqctl delete_vhost {{ item }}"
+  loop: "{{ rabbitmq_delete_vhosts }}"
   changed_when: false

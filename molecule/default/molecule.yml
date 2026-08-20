@@ -23,11 +23,13 @@ provisioner:
   inventory:
     host_vars:
       instance:
-        rabbitmq_vhost: molecule_vhost
-        rabbitmq_user_name: molecule_user
-        rabbitmq_user_pass: molecule_pass
-        rabbitmq_user_perm_conf: 'conf'
-        rabbitmq_user_perm_write: 'write'
-        rabbitmq_user_perm_read: 'read'
+        rabbitmq_vhosts:
+          - molecule_vhost
+        rabbitmq_users:
+          - name: molecule_user
+            password: molecule_pass
+        rabbitmq_user_perm_conf: "conf"
+        rabbitmq_user_perm_write: "write"
+        rabbitmq_user_perm_read: "read"
 verifier:
   name: ansible

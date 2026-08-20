@@ -12,6 +12,8 @@ rabbitmq_user_perm_conf: ".*"
 rabbitmq_user_perm_write: ".*"
 rabbitmq_user_perm_read: ".*"
 rabbitmq_user_tags: []
+rabbitmq_default_vhosts:
+  - "/"
 
 rabbitmq_erlang_default:
   debian:
