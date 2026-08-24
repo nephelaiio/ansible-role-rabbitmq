@@ -67,9 +67,9 @@
   vars:
     _users_default:
       vhost: "/"
-      conf: "{{ rabbitmq_user_perm_conf }}"
-      write: "{{ rabbitmq_user_perm_write }}"
-      read: "{{ rabbitmq_user_perm_read }}"
+      perm_conf: "{{ rabbitmq_user_perm_conf }}"
+      perm_write: "{{ rabbitmq_user_perm_write }}"
+      perm_read: "{{ rabbitmq_user_perm_read }}"
     _vhosts_included: "{{ rabbitmq_default_vhosts }}"
     _to_dict: "nephelaiio.plugins.to_dict"
     _drop_attrs: "nephelaiio.plugins.drop_attributes"
@@ -173,11 +173,11 @@
 - name: Configure user
   ansible.builtin.command: >
     rabbitmqctl set_permissions -p
-      {{ item.vhost | default('/') }}
+      {{ item.vhost }}
       {{ _name }}
-      '{{ item.conf | default(rabbitmq_user_perm_conf) }}'
-      '{{ item.write | default(rabbitmq_user_perm_write) }}'
-      '{{ item.read | default(rabbitmq_user_perm_read) }}'
+      '{{ item.perm_conf }}'
+      '{{ item.perm_write }}'
+      '{{ item.perm_read }}'
   vars:
     _name: "{{ item.name }}"
   loop_control:

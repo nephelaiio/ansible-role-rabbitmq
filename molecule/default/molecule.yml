@@ -28,8 +28,9 @@ provisioner:
         rabbitmq_users:
           - name: molecule_user
             password: molecule_pass
-        rabbitmq_user_perm_conf: "conf"
-        rabbitmq_user_perm_write: "write"
-        rabbitmq_user_perm_read: "read"
+            perm_conf: "conf"
+            perm_write: "write"
+            perm_read: "read"
+            vhost: "molecule_vhost"
 verifier:
   name: ansible
