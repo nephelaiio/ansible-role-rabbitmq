@@ -47,12 +47,12 @@
 - name: Query vhosts
   ansible.builtin.command: "rabbitmqctl list_vhosts --formatter json"
   changed_when: false
-  register: rabbitmq_query_vhosts
+  register: _rabbitmq_query_vhosts
 
 - name: Query users
   ansible.builtin.command: rabbitmqctl list_users --formatter json
   changed_when: false
-  register: rabbitmq_query_users
+  register: _rabbitmq_query_users
 
 - name: Build rabbitmq facts
   ansible.builtin.set_fact:
@@ -75,7 +75,7 @@
     _drop_attrs: "nephelaiio.plugins.drop_attributes"
     _attrs:
       - user
-    _query_users: "{{ rabbitmq_query_users.stdout | default('') }}"
+    _query_users: "{{ _rabbitmq_query_users.stdout | default('') }}"
     _sort_users: "{{ _query_users | sort(attribute='user') }}"
     _existing_user_names: "{{ _sort_users | map(attribute='user') }}"
     _existing_user_names_dict: "{{ _existing_user_names | map(_to_dict, 'name') }}"
@@ -86,7 +86,7 @@
     _target_user_names: "{{ _target_users_default | map(attribute='name') }}"
     _create_users: "{{ _target_users_default | rejectattr('name', 'in', _existing_user_names) }}"
     _delete_users: "{{ _existing_users | rejectattr('name', 'in', _target_user_names) }}"
-    _query_vhosts: "{{ rabbitmq_query_vhosts.stdout | default('') }}"
+    _query_vhosts: "{{ _rabbitmq_query_vhosts.stdout | default('') }}"
     _existing_vhosts: "{{ _query_vhosts | map(attribute='name') }}"
     _target_vhosts: "{{ rabbitmq_vhosts | default([]) }}"
     _create_vhosts: "{{ _target_vhosts | reject('in', _existing_vhosts) }}"
@@ -94,15 +94,15 @@
 
 - name: Debug existing rabbitmq users
   ansible.builtin.debug:
-    msg: "[{{ rabbitmq_existing_users }}]"
+    msg: "{{ rabbitmq_existing_users }}"
 
 - name: Debug target rabbitmq users
   ansible.builtin.debug:
-    msg: "[{{ rabbitmq_target_users }}]"
+    msg: "{{ rabbitmq_target_users }}"
 
 - name: Debug missing rabbitmq users
   ansible.builtin.debug:
-    msg: "[{{ rabbitmq_create_users }}]"
+    msg: "{{ rabbitmq_create_users }}"
 
 - name: Debug stale rabbitmq users
   ansible.builtin.debug:

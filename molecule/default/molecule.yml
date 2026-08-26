@@ -34,3 +34,9 @@ provisioner:
             vhost: "molecule_vhost"
 verifier:
   name: ansible
+scenario:
+  test_sequence:
+    - create
+    - converge
+    - verify
+    - side_effect

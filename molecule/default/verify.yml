@@ -32,37 +32,37 @@
 
     - name: Query rabbitmq vhosts
       ansible.builtin.command: rabbitmqctl list_vhosts --formatter json
-      register: _query_vhosts
+      register: _rabbitmq_query_vhosts
       changed_when: false
 
     - name: Query rabbitmq users
       ansible.builtin.command: rabbitmqctl list_users --formatter json
-      register: _query_users
+      register: _rabbitmq_query_users
       changed_when: false
 
     - name: Set existing RabbitMQ users and vhosts
       ansible.builtin.set_fact:
-        _existing_users: "{{ _users }}"
-        _existing_vhosts: "{{ _vhosts }}"
-        _target_users: "{{ _target_users_default }}"
+        _rabbitmq_existing_users: "{{ _users }}"
+        _rabbitmq_existing_vhosts: "{{ _vhosts }}"
+        _rabbitmq_target_users: "{{ _target_users_default }}"
       vars:
         _users_default:
           vhost: "/"
           perm_conf: ".*"
           perm_write: ".*"
           perm_read: ".*"
-        _users: "{{ _query_users.stdout | default('') }}"
-        _vhosts: "{{ _query_vhosts.stdout | default('') }}"
+        _users: "{{ _rabbitmq_query_users.stdout | default('') }}"
+        _vhosts: "{{ _rabbitmq_query_vhosts.stdout | default('') }}"
         _target_users: "{{ rabbitmq_users | default([]) }}"
         _target_users_default: "{{ [_users_default] | product(_target_users) | map('combine') }}"
 
     - name: Debug target users
       ansible.builtin.debug:
-        msg: "{{ _target_users }}"
+        msg: "{{ _rabbitmq_target_users }}"
 
     - name: Debug existing users
       ansible.builtin.debug:
-        msg: "{{ _existing_users }}"
+        msg: "{{ _rabbitmq_existing_users }}"
 
     - name: Debug target vhosts
       ansible.builtin.debug:
@@ -70,27 +70,36 @@
 
     - name: Debug existing vhosts
       ansible.builtin.debug:
-        msg: "{{ _existing_vhosts | map(attribute='name') }}"
+        msg: "{{ _rabbitmq_existing_vhosts | map(attribute='name') }}"
+
+    - name: Verify RabbitMQ manage vhosts task
+      ansible.builtin.assert:
+        that: _missing | length == 0
+        fail_msg: "RabbitMQ vhosts don't exist: [{{ _missing | join(', ') }}]"
+      vars:
+        _targets: "{{ rabbitmq_vhosts | default([]) }}"
+        _existing: "{{ _rabbitmq_existing_vhosts | map(attribute='name') }}"
+        _missing: "{{ _targets | reject('in', _existing) }}"
 
     - name: Verify RabbitMQ manage users task
       ansible.builtin.assert:
         that: _missing | length == 0
         fail_msg: "RabbitMQ users don't exist: [{{ _missing_names | join(', ') }}]"
       vars:
-        _targets: "{{ _target_users | default([]) }}"
-        _existing: "{{ _existing_users | map(attribute='user') }}"
+        _targets: "{{ _rabbitmq_target_users | default([]) }}"
+        _existing: "{{ _rabbitmq_existing_users | map(attribute='user') }}"
         _missing: "{{ _targets | rejectattr('name', 'in', _existing) }}"
         _missing_names: "{{ _missing | map(attribute='name') }}"
 
     - name: Query rabbitmq permissions
       ansible.builtin.command: "rabbitmqctl list_user_permissions {{ item }} --formatter json"
-      register: _query_perms
-      loop: "{{ _existing_users | map(attribute='user') }}"
+      register: _rabbitmq_query_perms
+      loop: "{{ _rabbitmq_existing_users | map(attribute='user') }}"
       changed_when: false
 
     - name: Build RabbitMQ existing user permissions
       ansible.builtin.set_fact:
-        _existing_user_permissions: "{{ _existing | flatten }}"
+        _rabbitmq_existing_user_perms: "{{ _existing | flatten }}"
       vars:
         _to_dict: "nephelaiio.plugins.to_dict"
         _cons: "nephelaiio.plugins.cons"
@@ -101,7 +110,7 @@
           - perm_read
           - perm_write
           - vhost
-        _results: "{{ _query_perms.results | default([]) | sort(attribute='item') }}"
+        _results: "{{ _rabbitmq_query_perms.results | default([]) | sort(attribute='item') }}"
         _names: "{{ _results | map(attribute='item') }}"
         _names_dict: "{{ _names | map(_to_dict, 'name') | map(_cons) }}"
         _permissions: "{{ _results | map(attribute='stdout') | map('from_json') }}"
@@ -119,7 +128,7 @@
 
     - name: Debug existing user permissions
       ansible.builtin.debug:
-        msg: "{{ _existing_user_permissions }}"
+        msg: "{{ _rabbitmq_existing_user_perms }}"
 
     - name: Verify RabbitMQ user permissions
       ansible.builtin.assert:
@@ -127,5 +136,5 @@
         fail_msg: "RabbitMQ target user permissions are not set correctly"
       vars:
         _drop_attrs: "nephelaiio.plugins.drop_attributes"
-        _targets: "{{ _target_users | map(_drop_attrs, ['password']) }}"
-        _existing: "{{ _existing_user_permissions }}"
+        _targets: "{{ _rabbitmq_target_users | map(_drop_attrs, ['password']) }}"
+        _existing: "{{ _rabbitmq_existing_user_perms }}"
