@@ -28,18 +28,104 @@
 
     - name: Verify rabbitmq cli
       ansible.builtin.command: rabbitmqctl help
+      changed_when: false
 
     - name: Query rabbitmq vhosts
-      ansible.builtin.command: rabbitmqctl list_vhosts
-      register: _query_vhost
-      failed_when: _query_vhost.stdout is not search("molecule_vhost", multiline=true)
+      ansible.builtin.command: rabbitmqctl list_vhosts --formatter json
+      register: _query_vhosts
+      changed_when: false
 
     - name: Query rabbitmq users
-      ansible.builtin.command: rabbitmqctl list_users
-      register: _query_user
-      failed_when: _query_user.stdout is not search("molecule_user", multiline=true)
+      ansible.builtin.command: rabbitmqctl list_users --formatter json
+      register: _query_users
+      changed_when: false
+
+    - name: Set existing RabbitMQ users and vhosts
+      ansible.builtin.set_fact:
+        _existing_users: "{{ _users }}"
+        _existing_vhosts: "{{ _vhosts }}"
+        _target_users: "{{ _target_users_default }}"
+      vars:
+        _users_default:
+          vhost: "/"
+          perm_conf: ".*"
+          perm_write: ".*"
+          perm_read: ".*"
+        _users: "{{ _query_users.stdout | default('') }}"
+        _vhosts: "{{ _query_vhosts.stdout | default('') }}"
+        _target_users: "{{ rabbitmq_users | default([]) }}"
+        _target_users_default: "{{ [_users_default] | product(_target_users) | map('combine') }}"
+
+    - name: Debug target users
+      ansible.builtin.debug:
+        msg: "{{ _target_users }}"
+
+    - name: Debug existing users
+      ansible.builtin.debug:
+        msg: "{{ _existing_users }}"
+
+    - name: Debug target vhosts
+      ansible.builtin.debug:
+        msg: "{{ rabbitmq_vhosts }}"
+
+    - name: Debug existing vhosts
+      ansible.builtin.debug:
+        msg: "{{ _existing_vhosts | map(attribute='name') }}"
+
+    - name: Verify RabbitMQ manage users task
+      ansible.builtin.assert:
+        that: _missing | length == 0
+        fail_msg: "RabbitMQ users don't exist: [{{ _missing_names | join(', ') }}]"
+      vars:
+        _targets: "{{ _target_users | default([]) }}"
+        _existing: "{{ _existing_users | map(attribute='user') }}"
+        _missing: "{{ _targets | rejectattr('name', 'in', _existing) }}"
+        _missing_names: "{{ _missing | map(attribute='name') }}"
 
     - name: Query rabbitmq permissions
-      ansible.builtin.command: rabbitmqctl list_user_permissions molecule_user
+      ansible.builtin.command: "rabbitmqctl list_user_permissions {{ item }} --formatter json"
       register: _query_perms
-      failed_when: _query_perms.stdout is not search('molecule_vhost\tconf\twrite\tread', multiline=true)
+      loop: "{{ _existing_users | map(attribute='user') }}"
+      changed_when: false
+
+    - name: Build RabbitMQ existing user permissions
+      ansible.builtin.set_fact:
+        _existing_user_permissions: "{{ _existing | flatten }}"
+      vars:
+        _to_dict: "nephelaiio.plugins.to_dict"
+        _cons: "nephelaiio.plugins.cons"
+        _inner_product: "nephelaiio.plugins.inner_product"
+        _select_attrs: "nephelaiio.plugins.select_attributes"
+        _attrs:
+          - perm_conf
+          - perm_read
+          - perm_write
+          - vhost
+        _results: "{{ _query_perms.results | default([]) | sort(attribute='item') }}"
+        _names: "{{ _results | map(attribute='item') }}"
+        _names_dict: "{{ _names | map(_to_dict, 'name') | map(_cons) }}"
+        _permissions: "{{ _results | map(attribute='stdout') | map('from_json') }}"
+        _perm_writes: "{{ _permissions | map('map', attribute='write') }}"
+        _perm_writes_dict: "{{ _perm_writes | map('map', _to_dict, 'perm_write') }}"
+        _perm_writes_overwritten: "{{ _permissions | zip(_perm_writes_dict) | map(_inner_product) | map('map', 'combine') }}"
+        _perm_reads: "{{ _perm_writes_overwritten | map('map', attribute='read') }}"
+        _perm_reads_dict: "{{ _perm_reads | map('map', _to_dict, 'perm_read') }}"
+        _perm_reads_overwritten: "{{ _perm_writes_overwritten | zip(_perm_reads_dict) | map(_inner_product) | map('map', 'combine') }}"
+        _perm_confs: "{{ _perm_reads_overwritten | map('map', attribute='configure') }}"
+        _perm_confs_dict: "{{ _perm_confs | map('map', _to_dict, 'perm_conf') }}"
+        _perm_confs_overwritten: "{{ _perm_reads_overwritten | zip(_perm_confs_dict) | map(_inner_product) | map('map', 'combine') }}"
+        _permissions_selected: "{{ _perm_confs_overwritten | map('map', _select_attrs, _attrs) }}"
+        _existing: "{{ _names_dict | zip(_permissions_selected) | map(_inner_product) | map('map', 'combine') }}"
+
+    - name: Debug existing user permissions
+      ansible.builtin.debug:
+        msg: "{{ _existing_user_permissions }}"
+
+    - name: Verify RabbitMQ user permissions
+      ansible.builtin.assert:
+        that: _targets | difference(_existing) | length == 0
+        fail_msg: "RabbitMQ target user permissions are not set correctly"
+      vars:
+        _drop_attrs: "nephelaiio.plugins.drop_attributes"
+        _targets: "{{ _target_users | map(_drop_attrs, ['password']) }}"
+        _existing: "{{ _existing_user_permissions }}"
