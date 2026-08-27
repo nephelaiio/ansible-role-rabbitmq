@@ -1,0 +1,107 @@
+---
+- name: Query users
+  ansible.builtin.command: rabbitmqctl list_users --formatter json
+  changed_when: false
+  register: _rabbitmq_query_users
+
+- name: Build rabbitmq facts
+  ansible.builtin.set_fact:
+    rabbitmq_existing_users: "{{ _existing_users }}"
+    rabbitmq_create_users: "{{ _create_users }}"
+    rabbitmq_delete_users: "{{ _delete_users }}"
+  vars:
+    _users_default:
+      vhost: "/"
+      perm_conf: "{{ rabbitmq_user_perm_conf }}"
+      perm_write: "{{ rabbitmq_user_perm_write }}"
+      perm_read: "{{ rabbitmq_user_perm_read }}"
+    _to_dict: "nephelaiio.plugins.to_dict"
+    _drop_attrs: "nephelaiio.plugins.drop_attributes"
+    _attrs:
+      - user
+    _query_users: "{{ _rabbitmq_query_users.stdout | default('') }}"
+    _sort_users: "{{ _query_users | sort(attribute='user') }}"
+    _existing_user_names: "{{ _sort_users | map(attribute='user') }}"
+    _existing_user_names_dict: "{{ _existing_user_names | map(_to_dict, 'name') }}"
+    _existing_users_overwritten: "{{ _sort_users | zip(_existing_user_names_dict) | map('combine') }}"
+    _existing_users: "{{ _existing_users_overwritten | map(_drop_attrs, _attrs) }}"
+    _target_users: "{{ rabbitmq_target_users | default([]) }}"
+    _target_user_names: "{{ _target_users | map(attribute='name') }}"
+    _create_users: "{{ _target_users | rejectattr('name', 'in', _existing_user_names) }}"
+    _delete_users: "{{ _existing_users | rejectattr('name', 'in', _target_user_names) }}"
+
+- name: Debug existing rabbitmq users
+  ansible.builtin.debug:
+    msg: "{{ rabbitmq_existing_users }}"
+
+- name: Debug target rabbitmq users
+  ansible.builtin.debug:
+    msg: "{{ rabbitmq_target_users }}"
+
+- name: Debug missing rabbitmq users
+  ansible.builtin.debug:
+    msg: "{{ rabbitmq_create_users }}"
+
+- name: Debug stale rabbitmq users
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_delete_users | map(attribute='name') | join(', ') }}]"
+
+- name: Create rabbitmq user
+  ansible.builtin.command: >
+    rabbitmqctl add_user
+      {{ _name }}
+      {{ item.password }}
+  vars:
+    _name: "{{ item.name }}"
+  loop_control:
+    label: "{{ _name }}"
+  loop: "{{ rabbitmq_create_users }}"
+  changed_when: false
+
+- name: Set user pass
+  ansible.builtin.command: >
+    rabbitmqctl change_password
+      {{ _name }}
+      {{ item.password }}
+  vars:
+    _name: "{{ item.name }}"
+  loop_control:
+    label: "{{ _name }}"
+  loop: "{{ rabbitmq_target_users }}"
+  changed_when: false
+
+- name: Configure user
+  ansible.builtin.command: >
+    rabbitmqctl set_permissions -p
+      {{ item.vhost }}
+      {{ _name }}
+      '{{ item.perm_conf }}'
+      '{{ item.perm_write }}'
+      '{{ item.perm_read }}'
+  vars:
+    _name: "{{ item.name }}"
+  loop_control:
+    label: "{{ _name }}"
+  loop: "{{ rabbitmq_target_users }}"
+  changed_when: false
+
+- name: Set user tags
+  ansible.builtin.command: >
+    rabbitmqctl set_user_tags
+      {{ _name }}
+      {{ item.tags | default(rabbitmq_user_tags | join(' ')) }}
+  vars:
+    _name: "{{ item.name }}"
+  loop_control:
+    label: "{{ _name }}"
+  loop: "{{ rabbitmq_target_users }}"
+  changed_when: false
+
+- name: Prune stale rabbitmq users
+  ansible.builtin.command: rabbitmqctl delete_user {{ _name }}
+  vars:
+    _name: "{{ item.name }}"
+  loop_control:
+    label: "{{ _name }}"
+  loop: "{{ rabbitmq_delete_users }}"
+  changed_when: true
