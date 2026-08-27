@@ -1,0 +1,62 @@
+---
+- name: Query vhosts
+  ansible.builtin.command: "rabbitmqctl list_vhosts --formatter json"
+  changed_when: false
+  register: _rabbitmq_query_vhosts
+
+- name: Build rabbitmq facts
+  ansible.builtin.set_fact:
+    rabbitmq_target_vhosts: "{{ _target_vhosts }}"
+    rabbitmq_existing_vhosts: "{{ _existing_vhosts }}"
+    rabbitmq_create_vhosts: "{{ _create_vhosts }}"
+    rabbitmq_delete_vhosts: "{{ _delete_vhosts | reject('in', _vhosts_included) }}"
+  vars:
+    _vhosts_included: "{{ rabbitmq_default_vhosts }}"
+    _query_vhosts: "{{ _rabbitmq_query_vhosts.stdout | default('') }}"
+    _existing_vhosts: "{{ _query_vhosts | map(attribute='name') }}"
+    _target_vhosts: "{{ rabbitmq_vhosts | default([]) }}"
+    _create_vhosts: "{{ _target_vhosts | reject('in', _existing_vhosts) }}"
+    _delete_vhosts: "{{ _existing_vhosts | reject('in', _target_vhosts) }}"
+
+- name: Debug existing rabbitmq vhosts
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_existing_vhosts | join(', ') }}]"
+
+- name: Debug target rabbitmq vhosts
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_target_vhosts | join(', ') }}]"
+
+- name: Debug missing rabbitmq vhosts
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_create_vhosts | join(', ') }}]"
+
+- name: Debug stale rabbitmq vhosts
+  ansible.builtin.debug:
+    msg: "[{{ rabbitmq_delete_vhosts | join(', ') }}]"
+
+- name: Verify rabbitmq target users
+  ansible.builtin.assert:
+    that: _target_users | rejectattr('vhost', 'in', _vhosts) | length == 0
+    fail_msg: "RabbitMQ target vhosts must be present: ['{{ _missing_vhosts | join(', ') }}']"
+  vars:
+    _target_users: "{{ rabbitmq_target_users | default([]) }}"
+    _vhosts: "{{ rabbitmq_target_vhosts + rabbitmq_default_vhosts | unique }}"
+    _missing_vhosts: "{{ _target_users | rejectattr('vhost', 'in', _vhosts) }}"
+
+- name: Verify rabbitmq target vhosts
+  ansible.builtin.assert:
+    that: _default_vhosts | select('in', _delete_vhosts) | length == 0
+    fail_msg: "RabbitMQ default vhosts cannot be deleted: ['{{ _default_vhosts | join(', ') }}']"
+  vars:
+    _delete_vhosts: "{{ rabbitmq_delete_vhosts }}"
+    _default_vhosts: "{{ rabbitmq_default_vhosts }}"
+
+- name: Create rabbitmq vhost
+  ansible.builtin.command: "rabbitmqctl add_vhost {{ item }}"
+  loop: "{{ rabbitmq_create_vhosts }}"
+  changed_when: false
+
+- name: Prune stale rabbitmq vhosts
+  ansible.builtin.command: "rabbitmqctl delete_vhost {{ item }}"
+  loop: "{{ rabbitmq_delete_vhosts }}"
+  changed_when: false

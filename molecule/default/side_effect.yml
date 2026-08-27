@@ -1,0 +1,50 @@
+---
+- name: Test rabbitmq new user manage tasks
+  hosts: all
+  become: true
+  tasks:
+    - name: Override rabbitmq user facts
+      ansible.builtin.set_fact:
+        rabbitmq_users:
+          - name: molecule_user
+            password: molecule_pass
+            perm_conf: "conf"
+            perm_write: "write"
+            perm_read: "read"
+            vhost: "molecule_vhost"
+          - name: molecule_user_2
+            password: molecule_pass
+            vhost: "molecule_vhost"
+          - name: molecule_user_3
+            password: molecule_pass
+
+    - name: Include nephelaiio.rabbitmq role
+      ansible.builtin.include_role:
+        name: nephelaiio.rabbitmq
+
+- name: Verify rabbitmq users
+  ansible.builtin.import_playbook: ./verify.yml
+
+- name: Test rabbitmq stale user manage tasks
+  hosts: all
+  become: true
+  tasks:
+    - name: Override rabbitmq user facts
+      ansible.builtin.set_fact:
+        rabbitmq_users:
+          - name: molecule_user
+            password: molecule_pass
+            perm_conf: "conf"
+            perm_write: "write"
+            perm_read: "read"
+            vhost: "molecule_vhost"
+          - name: molecule_user_2
+            password: molecule_pass
+            vhost: "molecule_vhost"
+
+    - name: Include nephelaiio.rabbitmq role
+      ansible.builtin.include_role:
+        name: nephelaiio.rabbitmq
+
+- name: Verify rabbitmq users
+  ansible.builtin.import_playbook: ./verify.yml

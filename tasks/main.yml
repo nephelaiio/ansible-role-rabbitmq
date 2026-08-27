@@ -1,100 +1,12 @@
 ---
-- name: Include variable overrides
-  ansible.builtin.set_fact:
-    _rabbitmq_erlang_packages: "{{ rabbitmq_erlang_packages | default(rabbitmq_erlang_default | nephelaiio.plugins.sorted_get(overrides)) }}"
-    _rabbitmq_packages: "{{ rabbitmq_packages | default(rabbitmq_packages_default | nephelaiio.plugins.sorted_get(overrides)) }}"
-    _rabbitmq_service_name: "{{ rabbitmq_service_name | default(rabbitmq_service_default | nephelaiio.plugins.sorted_get(overrides)) }}"
-  vars:
-    overrides:
-      - "{{ ansible_distribution | lower }}-{{ ansible_distribution_release | lower }}"
-      - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}"
-      - "{{ ansible_distribution | lower }}"
-      - "{{ ansible_os_family | lower }}"
-      - "default"
+- name: Import RabbitMQ var tasks
+  ansible.builtin.include_tasks: vars.yml
 
-- name: Install erlang packages
-  ansible.builtin.package:
-    name: "{{ _rabbitmq_erlang_packages }}"
-  notify:
-    - vhost_remove
-    - guest_remove
+- name: Import RabbitMQ install tasks
+  ansible.builtin.include_tasks: install.yml
 
-- name: Install rabbitmq packages
-  ansible.builtin.package:
-    name: "{{ _rabbitmq_packages }}"
-    state: "{{ rabbitmq_package_state }}"
-  notify:
-    - vhost_remove
-    - guest_remove
+- name: Import RabbitMQ vhost tasks
+  ansible.builtin.include_tasks: vhosts.yml
 
-- name: Manage services
-  ansible.builtin.service:
-    name: "{{ _rabbitmq_service_name }}"
-    state: "{{ rabbitmq_service_status }}"
-    enabled: "{{ rabbitmq_service_enabled }}"
-
-- name: Enable rabbitmq management
-  ansible.builtin.command: rabbitmq-plugins enable rabbitmq_management
-  changed_when: false
-
-- name: Query vhosts
-  ansible.builtin.command: "rabbitmqctl list_vhosts"
-  changed_when: false
-  register: rabbitmq_vhosts
-
-- name: Create vhost
-  ansible.builtin.command: "rabbitmqctl add_vhost {{ rabbitmq_vhost }}"
-  vars:
-    _defined: "{{ rabbitmq_vhost is defined }}"
-    _absent: "{{ rabbitmq_vhost not in rabbitmq_vhosts.stdout_lines }}"
-  when: _defined and _absent
-  changed_when: false
-
-- name: Query users
-  ansible.builtin.command: rabbitmqctl list_users
-  changed_when: false
-  register: rabbitmq_users
-
-- name: Create user
-  ansible.builtin.command: >
-    rabbitmqctl add_user
-      {{ rabbitmq_user_name }}
-      {{ rabbitmq_user_pass }}
-  vars:
-    _defined: "{{ rabbitmq_user_name is defined }}"
-    _absent: "{{ rabbitmq_user_name not in rabbitmq_users.stdout }}"
-  when: _defined and _absent
-  changed_when: false
-
-- name: Set user pass
-  ansible.builtin.command: >
-    rabbitmqctl change_password
-      {{ rabbitmq_user_name }}
-      {{ rabbitmq_user_pass }}
-  when: rabbitmq_user_name is defined
-  changed_when: false
-
-- name: Configure user
-  ansible.builtin.command: >
-    rabbitmqctl set_permissions -p
-      {{ rabbitmq_vhost }}
-      {{ rabbitmq_user_name }}
-      '{{ rabbitmq_user_perm_conf }}'
-      '{{ rabbitmq_user_perm_write }}'
-      '{{ rabbitmq_user_perm_read }}'
-  vars:
-    _vhost: "{{ rabbitmq_vhost is defined }}"
-    _user: "{{ rabbitmq_user_name is defined }}"
-  when: _vhost and _user
-  changed_when: false
-
-- name: Set user tags
-  ansible.builtin.command: >
-    rabbitmqctl set_user_tags
-      {{ rabbitmq_user_name }}
-      {{ rabbitmq_user_tags | join(' ') }}
-  vars:
-    _defined: "{{ rabbitmq_user_name is defined }}"
-    _tags: "{{ rabbitmq_user_tags != [] }}"
-  when: _defined and _tags
-  changed_when: false
+- name: Import RabbitMQ user tasks
+  ansible.builtin.include_tasks: users.yml

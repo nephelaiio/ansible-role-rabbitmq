@@ -1,0 +1,23 @@
+---
+- name: Build rabbitmq default facts
+  ansible.builtin.set_fact:
+    _rabbitmq_erlang_packages: "{{ rabbitmq_erlang_packages | default(rabbitmq_erlang_default | nephelaiio.plugins.sorted_get(overrides)) }}"
+    _rabbitmq_packages: "{{ rabbitmq_packages | default(rabbitmq_packages_default | nephelaiio.plugins.sorted_get(overrides)) }}"
+    _rabbitmq_service_name: "{{ rabbitmq_service_name | default(rabbitmq_service_default | nephelaiio.plugins.sorted_get(overrides)) }}"
+    rabbitmq_target_users: "{{ _target_users_default }}"
+  vars:
+    overrides:
+      - "{{ ansible_distribution | lower }}-{{ ansible_distribution_release | lower }}"
+      - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}"
+      - "{{ ansible_distribution | lower }}"
+      - "{{ ansible_os_family | lower }}"
+      - "default"
+    _users_default:
+      vhost: "/"
+      perm_conf: "{{ rabbitmq_user_perm_conf }}"
+      perm_write: "{{ rabbitmq_user_perm_write }}"
+      perm_read: "{{ rabbitmq_user_perm_read }}"
+    _attrs:
+      - user
+    _target_users: "{{ rabbitmq_users | default([]) }}"
+    _target_users_default: "{{ [_users_default] | product(_target_users) | map('combine') }}"
